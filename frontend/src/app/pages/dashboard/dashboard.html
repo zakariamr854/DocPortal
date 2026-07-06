@@ -1,0 +1,123 @@
+<div class="fade-in">
+
+  @if (user(); as u) {
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+          Bienvenue, {{ u.fullName || u.username }}
+          <img src="vague.png" alt="" aria-hidden="true" class="wave-img w-8 h-8">
+        </h1>
+        <p class="text-slate-500 text-sm mt-1">Voici l'activité de votre espace documentaire</p>
+      </div>
+      <a routerLink="/documents" class="btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+        Ajouter un document
+      </a>
+    </div>
+  }
+
+  <!-- Cartes statistiques -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+    <div class="stat-card">
+      <div class="stat-icon bg-blue-50 text-blue-700">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+      </div>
+      <p class="stat-label">Documents au total</p>
+      <p class="stat-value">{{ stats()?.totalDocuments ?? '—' }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon bg-cyan-50 text-cyan-700">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 0115 0"/></svg>
+      </div>
+      <p class="stat-label">Mes documents</p>
+      <p class="stat-value">{{ stats()?.myDocuments ?? '—' }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon bg-indigo-50 text-indigo-700">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
+      </div>
+      <p class="stat-label">Catégories actives</p>
+      <p class="stat-value">{{ stats()?.activeCategories ?? '—' }}</p>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon bg-emerald-50 text-emerald-700">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/></svg>
+      </div>
+      <p class="stat-label">Stockage utilisé</p>
+      <p class="stat-value">{{ stats() ? formatSize(stats()!.storageUsedBytes) : '—' }}</p>
+    </div>
+
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+
+    <!-- Documents récents -->
+    <div class="lg:col-span-2 bg-white border border-slate-200 rounded-lg shadow-sm">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 class="font-semibold text-slate-800">Documents récents</h2>
+        <a routerLink="/documents" class="text-sm text-blue-700 hover:underline">Tout voir</a>
+      </div>
+      @if (stats()?.recentDocuments?.length) {
+        @for (doc of stats()!.recentDocuments; track doc.id) {
+          <div class="flex items-center justify-between px-5 py-3 border-b border-slate-50 hover:bg-slate-50 transition">
+            <div class="min-w-0">
+              <p class="font-medium text-slate-700 truncate">{{ doc.title }}</p>
+              <p class="text-xs text-slate-400">{{ doc.categoryName || '—' }} · {{ formatSize(doc.size) }} · {{ doc.ownerName }}</p>
+            </div>
+            <span class="text-xs text-slate-400 whitespace-nowrap ml-4">{{ doc.createdAt | date:'dd/MM/yyyy' }}</span>
+          </div>
+        }
+      } @else {
+        <p class="px-5 py-10 text-center text-sm text-slate-400">Aucun document pour le moment.</p>
+      }
+    </div>
+
+    <!-- Dernières actions + catégories -->
+    <div class="space-y-6">
+
+      <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+        <div class="px-5 py-4 border-b border-slate-100">
+          <h2 class="font-semibold text-slate-800">Dernières actions</h2>
+        </div>
+        @if (stats()?.recentActions?.length) {
+          @for (h of stats()!.recentActions; track h.id) {
+            <div class="px-5 py-2.5 border-b border-slate-50 text-sm">
+              <p class="text-slate-700">
+                <span class="font-medium">{{ actionLabel(h.action) }}</span>
+                <span class="text-slate-400"> — {{ h.documentName }}</span>
+              </p>
+              <p class="text-xs text-slate-400">{{ h.userName }} · {{ h.actionDate | date:'dd/MM HH:mm' }}</p>
+            </div>
+          }
+        } @else {
+          <p class="px-5 py-8 text-center text-sm text-slate-400">Aucune action enregistrée.</p>
+        }
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+        <div class="px-5 py-4 border-b border-slate-100">
+          <h2 class="font-semibold text-slate-800">Documents par catégorie</h2>
+        </div>
+        @if (stats()?.documentsPerCategory?.length) {
+          <div class="px-5 py-3 space-y-2">
+            @for (c of stats()!.documentsPerCategory; track c.id) {
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-600">{{ c.name }}</span>
+                <span class="badge bg-blue-50 text-blue-700">{{ c.count }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="px-5 py-8 text-center text-sm text-slate-400">Aucune catégorie.</p>
+        }
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

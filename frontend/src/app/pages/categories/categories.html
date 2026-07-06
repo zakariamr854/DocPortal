@@ -1,0 +1,116 @@
+<div class="fade-in">
+
+  <!-- En-tête -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Catégories</h1>
+      <p class="text-slate-500 text-sm mt-1">Classez vos documents par catégorie</p>
+    </div>
+    <button (click)="openCreate()" class="btn-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+      Nouvelle catégorie
+    </button>
+  </div>
+
+  <!-- Messages -->
+  @if (notice()) {
+    <div class="mb-4 bg-green-50 border border-green-200 text-green-800 rounded-md px-4 py-3 text-sm fade-in">
+      {{ notice() }}
+    </div>
+  }
+  @if (error()) {
+    <div class="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-md px-4 py-3 text-sm fade-in flex justify-between items-center">
+      {{ error() }}
+      <button (click)="error.set('')" class="text-red-400 hover:text-red-600 font-bold ml-4">✕</button>
+    </div>
+  }
+
+  <!-- Grille des catégories -->
+  @if (loading()) {
+    <div class="text-center text-slate-400 py-16">
+      <span class="spinner-dark inline-block align-middle mr-2"></span> Chargement…
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      @for (cat of categories(); track cat.id) {
+        <div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm hover:shadow-md transition row-in"
+             [class.opacity-60]="!cat.active">
+
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-md bg-blue-50 text-blue-700 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-slate-800">{{ cat.name }}</h3>
+                <p class="text-xs text-slate-400">{{ cat.documentCount }} document(s)</p>
+              </div>
+            </div>
+            @if (!cat.active) {
+              <span class="badge bg-slate-100 text-slate-500">Désactivée</span>
+            }
+          </div>
+
+          @if (cat.description) {
+            <p class="text-sm text-slate-500 mt-3">{{ cat.description }}</p>
+          }
+
+          <div class="flex gap-2 mt-4 pt-4 border-t border-slate-100">
+            <button (click)="openEdit(cat)" class="cat-action text-blue-700 hover:bg-blue-50">Modifier</button>
+            <button (click)="toggleActive(cat)" class="cat-action text-amber-600 hover:bg-amber-50">
+              {{ cat.active ? 'Désactiver' : 'Réactiver' }}
+            </button>
+            <button (click)="deleteTarget.set(cat)" class="cat-action text-red-600 hover:bg-red-50">Supprimer</button>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
+
+</div>
+
+<!-- Modal formulaire -->
+@if (showForm()) {
+  <div class="modal-backdrop" (click)="showForm.set(false)">
+    <div class="modal-card max-w-md" (click)="$event.stopPropagation()">
+      <h2 class="text-lg font-bold text-slate-800 mb-5">
+        {{ editing() ? 'Modifier la catégorie' : 'Nouvelle catégorie' }}
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Nom <span class="text-red-500">*</span></label>
+          <input type="text" [(ngModel)]="formName" class="form-input" placeholder="ex : Contrats">
+        </div>
+        <div>
+          <label class="form-label">Description</label>
+          <textarea [(ngModel)]="formDescription" rows="2" class="form-input" placeholder="Description optionnelle"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button (click)="showForm.set(false)" class="btn-secondary">Annuler</button>
+        <button (click)="submitForm()" class="btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Confirmation suppression -->
+@if (deleteTarget(); as cat) {
+  <div class="modal-backdrop" (click)="deleteTarget.set(null)">
+    <div class="modal-card max-w-sm" (click)="$event.stopPropagation()">
+      <h2 class="text-lg font-bold text-slate-800">Supprimer « {{ cat.name }} » ?</h2>
+      <p class="text-sm text-slate-500 mt-2">
+        @if (cat.documentCount > 0) {
+          Cette catégorie est utilisée par {{ cat.documentCount }} document(s) : elle sera désactivée, pas supprimée.
+        } @else {
+          Cette catégorie est vide, elle sera définitivement supprimée.
+        }
+      </p>
+      <div class="flex justify-end gap-3 mt-6">
+        <button (click)="deleteTarget.set(null)" class="btn-secondary">Annuler</button>
+        <button (click)="confirmDelete()" class="btn-danger">Confirmer</button>
+      </div>
+    </div>
+  </div>
+}
