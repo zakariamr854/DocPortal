@@ -9,13 +9,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 public interface DocumentService {
 
     Document upload(MultipartFile file, String title, String description, String tags,
                     Long categoryId, String visibility, User owner);
 
     Page<Document> search(String query, Long categoryId, String extension, String status,
-                          boolean mine, User requester, Pageable pageable);
+                          boolean mine, Long ownerId, User requester, Pageable pageable);
+
+    List<User> visibleOwners(User requester);
 
     Document findAccessible(Long id, User requester);
 

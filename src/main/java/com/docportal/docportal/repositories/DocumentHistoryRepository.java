@@ -15,4 +15,6 @@ public interface DocumentHistoryRepository extends JpaRepository<DocumentHistory
 
     List<DocumentHistory> findByUser(User user);
 
+    List<DocumentHistory> findTop5ByUserOrderByActionDateDesc(User user);
+
 }

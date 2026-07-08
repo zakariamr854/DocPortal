@@ -38,4 +38,15 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, JpaSp
 
     @Query("select coalesce(sum(d.size), 0) from Document d where d.owner = :owner and d.status <> :excluded")
     long sumSizeByOwnerAndStatusNot(User owner, DocumentStatus excluded);
+
+    @Query("select distinct d.owner from Document d "
+            + "where d.status <> com.docportal.docportal.enums.DocumentStatus.DELETED "
+            + "order by d.owner.fullName")
+    List<User> findDistinctOwners();
+
+    @Query("select distinct d.owner from Document d "
+            + "where d.status <> com.docportal.docportal.enums.DocumentStatus.DELETED "
+            + "and (d.visibility = com.docportal.docportal.enums.Visibility.PUBLIC or d.owner.id = :requesterId) "
+            + "order by d.owner.fullName")
+    List<User> findDistinctVisibleOwners(Long requesterId);
 }

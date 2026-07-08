@@ -12,7 +12,7 @@ export interface DocumentDto {
   size: number;
   description: string | null;
   tags: string | null;
-  visibility: 'PUBLIC' | 'PRIVATE' | 'RESTRICTED';
+  visibility: 'PUBLIC' | 'PRIVATE';
   status: 'ACTIVE' | 'ARCHIVED' | 'DELETED';
   categoryId: number | null;
   categoryName: string | null;
@@ -58,12 +58,18 @@ export interface DashboardStats {
   recentActions: HistoryDto[];
 }
 
+export interface OwnerDto {
+  id: number;
+  name: string;
+}
+
 export interface DocumentFilters {
   q?: string;
   categoryId?: number | null;
   extension?: string;
   status?: string;
   mine?: boolean;
+  ownerId?: number | null;
   page?: number;
   size?: number;
   sort?: string;
@@ -90,6 +96,7 @@ export class DocumentService {
     if (filters.extension) params = params.set('extension', filters.extension);
     if (filters.status) params = params.set('status', filters.status);
     if (filters.mine) params = params.set('mine', true);
+    if (filters.ownerId) params = params.set('ownerId', filters.ownerId);
     params = params.set('page', filters.page ?? 0);
     params = params.set('size', filters.size ?? 10);
     if (filters.sort) params = params.set('sort', filters.sort);
@@ -145,6 +152,10 @@ export class DocumentService {
 
   categories(): Observable<CategoryDto[]> {
     return this.http.get<CategoryDto[]>(`${API_URL}/categories`);
+  }
+
+  owners(): Observable<OwnerDto[]> {
+    return this.http.get<OwnerDto[]>(`${API_URL}/documents/owners`);
   }
 
   createCategory(category: { name: string; description?: string }): Observable<CategoryDto> {

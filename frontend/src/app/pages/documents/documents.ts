@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import {
-  CategoryDto, DocumentDto, DocumentService, HistoryDto, PageResult
+  CategoryDto, DocumentDto, DocumentService, HistoryDto, OwnerDto, PageResult
 } from '../../core/document.service';
 
 @Component({
@@ -22,6 +22,7 @@ export class DocumentsComponent {
   extension = '';
   status = 'ACTIVE';
   mine = false;
+  ownerId: number | null = null;
   sort = 'createdAt';
   dir = 'desc';
   page = 0;
@@ -29,6 +30,7 @@ export class DocumentsComponent {
 
   readonly result = signal<PageResult<DocumentDto> | null>(null);
   readonly categories = signal<CategoryDto[]>([]);
+  readonly owners = signal<OwnerDto[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
@@ -62,11 +64,18 @@ export class DocumentsComponent {
 
   constructor(private documents: DocumentService, private auth: AuthService) {
     this.loadCategories();
+    if (this.isViewer) {
+      this.loadOwners();
+    }
     this.load();
   }
 
   get isAdmin(): boolean {
     return this.auth.currentUser()?.role === 'ADMIN';
+  }
+
+  get isViewer(): boolean {
+    return this.auth.currentUser()?.role === 'VIEWER';
   }
 
   loadCategories() {
@@ -76,12 +85,19 @@ export class DocumentsComponent {
     });
   }
 
+  loadOwners() {
+    this.documents.owners().subscribe({
+      next: owners => this.owners.set(owners),
+      error: () => {}
+    });
+  }
+
   load() {
     this.loading.set(true);
     this.error.set('');
     this.documents.list({
       q: this.q, categoryId: this.categoryId, extension: this.extension,
-      status: this.status, mine: this.mine,
+      status: this.status, mine: this.mine, ownerId: this.ownerId,
       page: this.page, size: this.pageSize, sort: this.sort, dir: this.dir
     }).subscribe({
       next: res => { this.result.set(res); this.loading.set(false); },
@@ -100,6 +116,7 @@ export class DocumentsComponent {
     this.extension = '';
     this.status = 'ACTIVE';
     this.mine = false;
+    this.ownerId = null;
     this.applyFilters();
   }
 
@@ -286,6 +303,9 @@ export class DocumentsComponent {
   }
 
   canManage(doc: DocumentDto): boolean {
+    if (this.isViewer) {
+      return false;
+    }
     return this.isAdmin || doc.ownerId === this.auth.currentUser()?.id;
   }
 

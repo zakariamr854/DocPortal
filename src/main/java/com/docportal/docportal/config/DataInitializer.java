@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
@@ -18,10 +19,14 @@ public class DataInitializer {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @Bean
     public CommandLineRunner seedUsers() {
         return args -> {
+            // Migration : la visibilité "restreint" a été retirée -> tout document existant devient privé
+            jdbcTemplate.update("UPDATE document SET visibility = 'PRIVATE' WHERE visibility = 'RESTRICTED'");
+
             createIfMissing("admin", "admin123", "Administrateur DocPortal", "admin@docportal.com", Role.ADMIN);
             createIfMissing("user", "user123", "Utilisateur DocPortal", "user@docportal.com", Role.USER);
             createIfMissing("sara", "sara123", "Sara Benali", "sara@docportal.com", Role.USER);
@@ -29,6 +34,7 @@ public class DataInitializer {
             createIfMissing("yasmine", "yasmine123", "Yasmine Tazi", "yasmine@docportal.com", Role.USER);
             createIfMissing("mehdi", "mehdi123", "Mehdi Alaoui", "mehdi@docportal.com", Role.USER);
             createIfMissing("nadia", "nadia123", "Nadia Chraibi", "nadia@docportal.com", Role.USER);
+            createIfMissing("viewer", "viewer123", "Lecteur DocPortal", "viewer@docportal.com", Role.VIEWER);
 
             createCategoryIfMissing("Contrats", "Contrats et accords");
             createCategoryIfMissing("Factures", "Factures fournisseurs et clients");

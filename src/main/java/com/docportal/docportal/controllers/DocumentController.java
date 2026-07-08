@@ -4,6 +4,7 @@ import com.docportal.docportal.dto.DashboardStatsDto;
 import com.docportal.docportal.dto.DocumentDto;
 import com.docportal.docportal.dto.DocumentUpdateRequest;
 import com.docportal.docportal.dto.HistoryDto;
+import com.docportal.docportal.dto.OwnerDto;
 import com.docportal.docportal.entities.Document;
 import com.docportal.docportal.entities.User;
 import com.docportal.docportal.exceptions.ApiException;
@@ -61,6 +62,7 @@ public class DocumentController {
                                                     @RequestParam(required = false) String extension,
                                                     @RequestParam(required = false) String status,
                                                     @RequestParam(defaultValue = "false") boolean mine,
+                                                    @RequestParam(required = false) Long ownerId,
                                                     @RequestParam(defaultValue = "0") int page,
                                                     @RequestParam(defaultValue = "10") int size,
                                                     @RequestParam(defaultValue = "createdAt") String sort,
@@ -76,7 +78,7 @@ public class DocumentController {
         };
         Sort.Direction direction = "asc".equalsIgnoreCase(dir) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
-        Page<Document> result = documentService.search(q, categoryId, extension, status, mine, user,
+        Page<Document> result = documentService.search(q, categoryId, extension, status, mine, ownerId, user,
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100), Sort.by(direction, sortProperty)));
 
         Map<String, Object> body = new LinkedHashMap<>();
@@ -91,6 +93,13 @@ public class DocumentController {
     @GetMapping("/stats")
     public ResponseEntity<DashboardStatsDto> stats(Authentication authentication) {
         return ResponseEntity.ok(documentService.stats(currentUser(authentication)));
+    }
+
+    @GetMapping("/owners")
+    public ResponseEntity<List<OwnerDto>> owners(Authentication authentication) {
+        return ResponseEntity.ok(documentService.visibleOwners(currentUser(authentication)).stream()
+                .map(OwnerDto::from)
+                .toList());
     }
 
     @GetMapping("/{id}")

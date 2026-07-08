@@ -48,10 +48,17 @@ public class DocumentServiceImpl implements DocumentService {
         return user.getRole() == Role.ADMIN;
     }
 
+    private static boolean isViewer(User user) {
+        return user.getRole() == Role.VIEWER;
+    }
+
     @Override
     @Transactional
     public Document upload(MultipartFile file, String title, String description, String tags,
                            Long categoryId, String visibility, User owner) {
+        if (isViewer(owner)) {
+            throw ApiException.forbidden("Un lecteur ne peut pas ajouter de documents");
+        }
         if (categoryId == null) {
             throw ApiException.badRequest("La catégorie est obligatoire");
         }
@@ -93,7 +100,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Page<Document> search(String query, Long categoryId, String extension, String status,
-                                 boolean mine, User requester, Pageable pageable) {
+                                 boolean mine, Long ownerId, User requester, Pageable pageable) {
 
         DocumentStatus wanted = parseStatus(status);
 
@@ -115,6 +122,9 @@ public class DocumentServiceImpl implements DocumentService {
             if (mine) {
                 predicates.add(cb.equal(root.get("owner").get("id"), requester.getId()));
             }
+            if (ownerId != null) {
+                predicates.add(cb.equal(root.get("owner").get("id"), ownerId));
+            }
             if (categoryId != null) {
                 predicates.add(cb.equal(root.get("category").get("id"), categoryId));
             }
@@ -135,6 +145,14 @@ public class DocumentServiceImpl implements DocumentService {
         };
 
         return documentRepository.findAll(spec, pageable);
+    }
+
+    @Override
+    public List<User> visibleOwners(User requester) {
+        // Propriétaires distincts des documents que le demandeur a le droit de voir
+        return isAdmin(requester)
+                ? documentRepository.findDistinctOwners()
+                : documentRepository.findDistinctVisibleOwners(requester.getId());
     }
 
     @Override
@@ -250,7 +268,10 @@ public class DocumentServiceImpl implements DocumentService {
             if (Boolean.TRUE.equals(category.getActive())) {
                 activeCategories++;
             }
-            long count = documentRepository.countByCategoryAndStatusNot(category, DocumentStatus.DELETED);
+            // Admin : tous les documents de la catégorie. Utilisateur : seulement ceux qu'il peut voir.
+            long count = admin
+                    ? documentRepository.countByCategoryAndStatusNot(category, DocumentStatus.DELETED)
+                    : documentRepository.count(visibleInCategorySpec(requester, category));
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("id", category.getId());
             entry.put("name", category.getName());
@@ -263,10 +284,13 @@ public class DocumentServiceImpl implements DocumentService {
                 : documentRepository.findAll(visibleSpec(requester),
                         PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
 
-        List<HistoryDto> recentActions = historyRepository
-                .findAll(PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "actionDate")))
+        // Admin : toutes les dernières actions. Utilisateur : uniquement les siennes.
+        List<HistoryDto> recentActions = (admin
+                ? historyRepository.findAll(PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "actionDate"))).getContent()
+                : historyRepository.findTop5ByUserOrderByActionDateDesc(requester))
+                .stream()
                 .map(HistoryDto::from)
-                .getContent();
+                .toList();
 
         return new DashboardStatsDto(
                 total,
@@ -289,7 +313,21 @@ public class DocumentServiceImpl implements DocumentService {
         );
     }
 
+    private Specification<Document> visibleInCategorySpec(User requester, Category category) {
+        return (root, cq, cb) -> cb.and(
+                cb.notEqual(root.get("status"), DocumentStatus.DELETED),
+                cb.equal(root.get("category").get("id"), category.getId()),
+                cb.or(
+                        cb.equal(root.get("visibility"), Visibility.PUBLIC),
+                        cb.equal(root.get("owner").get("id"), requester.getId())
+                )
+        );
+    }
+
     private Document requireOwnerOrAdmin(Long id, User requester, String action) {
+        if (isViewer(requester)) {
+            throw ApiException.forbidden("Un lecteur ne peut pas " + action + " de documents");
+        }
         Document document = documentRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Document introuvable"));
         if (document.getStatus() == DocumentStatus.DELETED) {

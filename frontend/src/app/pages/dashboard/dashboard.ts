@@ -24,6 +24,21 @@ export class DashboardComponent {
     });
   }
 
+  get isViewer(): boolean {
+    return this.auth.currentUser()?.role === 'VIEWER';
+  }
+
+  /** Nombre de catégories contenant au moins un document consultable. */
+  get categoriesWithDocs(): number {
+    return this.stats()?.documentsPerCategory.filter(c => c.count > 0).length ?? 0;
+  }
+
+  /** Date du document le plus récent que l'utilisateur peut consulter. */
+  get lastDocumentDate(): string | null {
+    const recent = this.stats()?.recentDocuments;
+    return recent && recent.length ? recent[0].createdAt : null;
+  }
+
   formatSize(bytes: number | null | undefined): string {
     if (bytes === null || bytes === undefined) return '—';
     if (bytes < 1024) return bytes + ' o';
