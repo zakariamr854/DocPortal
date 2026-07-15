@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpEventType } from '@angular/common/http';
 import { AuthService } from '../../core/auth.service';
 import {
-  CategoryDto, DocumentDto, DocumentService, HistoryDto, OwnerDto, PageResult
+  CategoryDto, DocumentDto, DocumentService, HistoryDto, OwnerDto, PageResult, VersionDto
 } from '../../core/document.service';
 
 @Component({
@@ -61,6 +61,14 @@ export class DocumentsComponent {
 
   // Confirmation de suppression
   readonly deleteTarget = signal<DocumentDto | null>(null);
+
+  // Modal versions
+  readonly versionsDoc = signal<DocumentDto | null>(null);
+  readonly versions = signal<VersionDto[]>([]);
+  readonly versionsLoading = signal(false);
+  readonly compareSel = signal<VersionDto[]>([]);
+  readonly expandedVersions = signal<number[]>([]);
+  readonly versionError = signal('');
 
   constructor(private documents: DocumentService, private auth: AuthService) {
     this.loadCategories();
@@ -302,6 +310,117 @@ export class DocumentsComponent {
     });
   }
 
+  // ===== Versions =====
+
+  openVersions(doc: DocumentDto) {
+    this.versionsDoc.set(doc);
+    this.versions.set([]);
+    this.compareSel.set([]);
+    this.expandedVersions.set([]);
+    this.versionError.set('');
+    this.loadVersions(doc.id);
+  }
+
+  loadVersions(docId: number) {
+    this.versionsLoading.set(true);
+    this.documents.versions(docId).subscribe({
+      next: v => { this.versions.set(v); this.versionsLoading.set(false); },
+      error: () => { this.versionsLoading.set(false); this.versionError.set('Impossible de charger les versions.'); }
+    });
+  }
+
+  toggleExpand(v: VersionDto) {
+    const ex = this.expandedVersions();
+    this.expandedVersions.set(
+      ex.includes(v.versionNumber) ? ex.filter(n => n !== v.versionNumber) : [...ex, v.versionNumber]
+    );
+  }
+
+  isExpanded(v: VersionDto): boolean {
+    return this.expandedVersions().includes(v.versionNumber);
+  }
+
+  /** L'utilisateur simple ne télécharge que l'état actuel ; l'admin télécharge toute version. */
+  canDownloadVersion(v: VersionDto): boolean {
+    return this.isAdmin || v.current;
+  }
+
+  /** La restauration d'une version précédente est réservée à l'administrateur. */
+  canRestoreVersion(v: VersionDto): boolean {
+    return this.isAdmin && !v.current && v.id !== null;
+  }
+
+  downloadVersion(v: VersionDto) {
+    const doc = this.versionsDoc();
+    if (!doc) return;
+    // Version actuelle = fichier courant du document ; version précédente = fichier archivé
+    const req = v.id === null ? this.documents.download(doc.id) : this.documents.downloadVersion(doc.id, v.id);
+    req.subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = v.originalFileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: err => this.versionError.set(err.error?.message ?? 'Échec du téléchargement de la version.')
+    });
+  }
+
+  restoreVersion(v: VersionDto) {
+    const doc = this.versionsDoc();
+    if (!doc || v.id === null) return;
+    this.documents.restoreVersion(doc.id, v.id).subscribe({
+      next: () => {
+        this.compareSel.set([]);
+        this.flash(`Version v${v.versionNumber} restaurée.`);
+        this.loadVersions(doc.id);
+        this.load();
+      },
+      error: err => this.versionError.set(err.error?.message ?? 'Échec de la restauration.')
+    });
+  }
+
+  toggleCompare(v: VersionDto) {
+    const sel = this.compareSel();
+    if (sel.some(s => s.versionNumber === v.versionNumber)) {
+      this.compareSel.set(sel.filter(s => s.versionNumber !== v.versionNumber));
+    } else if (sel.length < 2) {
+      this.compareSel.set([...sel, v]);
+    } else {
+      // Déjà 2 sélectionnées : on remplace la plus ancienne sélection
+      this.compareSel.set([sel[1], v]);
+    }
+  }
+
+  isCompared(v: VersionDto): boolean {
+    return this.compareSel().some(s => s.versionNumber === v.versionNumber);
+  }
+
+  get comparePair(): [VersionDto, VersionDto] | null {
+    const sel = this.compareSel();
+    if (sel.length !== 2) return null;
+    const sorted = [...sel].sort((a, b) => a.versionNumber - b.versionNumber);
+    return [sorted[0], sorted[1]];
+  }
+
+  /** Vrai si la valeur a changé entre deux versions (pour surligner la différence). */
+  changed(a: string | number | null, b: string | number | null): boolean {
+    return (a ?? '') !== (b ?? '');
+  }
+
+  visibilityLabel(v: string | null): string {
+    return v === 'PUBLIC' ? 'Public' : v === 'PRIVATE' ? 'Privé' : '—';
+  }
+
+  sizeDelta(a: VersionDto, b: VersionDto): string {
+    const delta = b.size - a.size;
+    if (delta === 0) return 'taille identique';
+    const sign = delta > 0 ? '+' : '−';
+    return `${sign}${this.formatSize(Math.abs(delta))}`;
+  }
+
   canManage(doc: DocumentDto): boolean {
     if (this.isViewer) {
       return false;
@@ -339,6 +458,7 @@ export class DocumentsComponent {
       case 'DELETE': return 'Suppression';
       case 'ARCHIVE': return 'Archivage';
       case 'RESTORE': return 'Restauration';
+      case 'NEW_VERSION': return 'Nouvelle version';
       default: return action;
     }
   }

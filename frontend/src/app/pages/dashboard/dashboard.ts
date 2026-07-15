@@ -54,6 +54,7 @@ export class DashboardComponent {
       case 'DELETE': return 'Suppression';
       case 'ARCHIVE': return 'Archivage';
       case 'RESTORE': return 'Restauration';
+      case 'NEW_VERSION': return 'Nouvelle version';
       default: return action;
     }
   }

@@ -7,5 +7,6 @@ public enum ActionType {
     DELETE,
     ARCHIVE,
     RESTORE,
+    NEW_VERSION,
     LOGIN
 }

@@ -2,7 +2,9 @@ package com.docportal.docportal.services;
 
 import com.docportal.docportal.dto.DashboardStatsDto;
 import com.docportal.docportal.dto.DocumentUpdateRequest;
+import com.docportal.docportal.dto.VersionDto;
 import com.docportal.docportal.entities.Document;
+import com.docportal.docportal.entities.DocumentVersion;
 import com.docportal.docportal.entities.User;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -34,4 +36,14 @@ public interface DocumentService {
     Resource download(Long id, User requester);
 
     DashboardStatsDto stats(User requester);
+
+    List<VersionDto> versions(Long id, User requester);
+
+    Document addVersion(Long id, MultipartFile file, String comment, User requester);
+
+    DocumentVersion findVersion(Long id, Long versionId, User requester);
+
+    Resource downloadVersion(Long id, Long versionId, User requester);
+
+    Document restoreVersion(Long id, Long versionId, User requester);
 }

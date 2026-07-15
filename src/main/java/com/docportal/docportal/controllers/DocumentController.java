@@ -5,7 +5,9 @@ import com.docportal.docportal.dto.DocumentDto;
 import com.docportal.docportal.dto.DocumentUpdateRequest;
 import com.docportal.docportal.dto.HistoryDto;
 import com.docportal.docportal.dto.OwnerDto;
+import com.docportal.docportal.dto.VersionDto;
 import com.docportal.docportal.entities.Document;
+import com.docportal.docportal.entities.DocumentVersion;
 import com.docportal.docportal.entities.User;
 import com.docportal.docportal.exceptions.ApiException;
 import com.docportal.docportal.repositories.UserRepository;
@@ -147,6 +149,50 @@ public class DocumentController {
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id, Authentication authentication) {
         documentService.softDelete(id, currentUser(authentication));
         return ResponseEntity.ok(Map.of("message", "Document supprimé"));
+    }
+
+    // ===================== Versioning =====================
+
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<List<VersionDto>> versions(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(documentService.versions(id, currentUser(authentication)));
+    }
+
+    @PostMapping("/{id}/versions")
+    public ResponseEntity<DocumentDto> addVersion(@PathVariable Long id,
+                                                  @RequestParam("file") MultipartFile file,
+                                                  @RequestParam(required = false) String comment,
+                                                  Authentication authentication) {
+        return ResponseEntity.ok(DocumentDto.from(
+                documentService.addVersion(id, file, comment, currentUser(authentication))));
+    }
+
+    @GetMapping("/{id}/versions/{versionId}/download")
+    public ResponseEntity<Resource> downloadVersion(@PathVariable Long id,
+                                                    @PathVariable Long versionId,
+                                                    Authentication authentication) {
+        User user = currentUser(authentication);
+        DocumentVersion version = documentService.findVersion(id, versionId, user);
+        Resource resource = documentService.downloadVersion(id, versionId, user);
+
+        String fileName = URLEncoder.encode(version.getOriginalFileName(), StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String contentType = version.getMimeType() != null
+                ? version.getMimeType()
+                : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fileName)
+                .header(HttpHeaders.CONTENT_TYPE, contentType)
+                .body(resource);
+    }
+
+    @PutMapping("/{id}/versions/{versionId}/restore")
+    public ResponseEntity<DocumentDto> restoreVersion(@PathVariable Long id,
+                                                      @PathVariable Long versionId,
+                                                      Authentication authentication) {
+        return ResponseEntity.ok(DocumentDto.from(
+                documentService.restoreVersion(id, versionId, currentUser(authentication))));
     }
 
     @PutMapping("/{id}/archive")

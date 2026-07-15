@@ -4,9 +4,11 @@ import com.docportal.docportal.dto.DashboardStatsDto;
 import com.docportal.docportal.dto.DocumentDto;
 import com.docportal.docportal.dto.DocumentUpdateRequest;
 import com.docportal.docportal.dto.HistoryDto;
+import com.docportal.docportal.dto.VersionDto;
 import com.docportal.docportal.entities.Category;
 import com.docportal.docportal.entities.Document;
 import com.docportal.docportal.entities.DocumentHistory;
+import com.docportal.docportal.entities.DocumentVersion;
 import com.docportal.docportal.entities.User;
 import com.docportal.docportal.enums.ActionType;
 import com.docportal.docportal.enums.DocumentStatus;
@@ -16,6 +18,7 @@ import com.docportal.docportal.exceptions.ApiException;
 import com.docportal.docportal.repositories.CategoryRepository;
 import com.docportal.docportal.repositories.DocumentHistoryRepository;
 import com.docportal.docportal.repositories.DocumentRepository;
+import com.docportal.docportal.repositories.DocumentVersionRepository;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -42,6 +45,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentRepository documentRepository;
     private final CategoryRepository categoryRepository;
     private final DocumentHistoryRepository historyRepository;
+    private final DocumentVersionRepository versionRepository;
     private final FileStorageService storage;
 
     private static boolean isAdmin(User user) {
@@ -177,6 +181,9 @@ public class DocumentServiceImpl implements DocumentService {
             throw ApiException.badRequest("Un document archivé n'est plus modifiable");
         }
 
+        // Versioning automatique : l'état précédent est figé avant d'appliquer la modification
+        snapshot(document, requester, "Avant modification des informations");
+
         if (request.title() != null && !request.title().isBlank()) {
             document.setTitle(request.title().trim());
         }
@@ -301,6 +308,148 @@ public class DocumentServiceImpl implements DocumentService {
                 recent.stream().map(DocumentDto::from).toList(),
                 recentActions
         );
+    }
+
+    // ===================== Versioning =====================
+    // Principe : chaque MODIFICATION d'un document (métadonnées, remplacement de
+    // fichier, restauration) fige d'abord l'état PRÉCÉDENT complet comme version.
+    // L'état actuel vit dans le document lui-même et s'affiche en tête de liste.
+
+    @Override
+    public List<VersionDto> versions(Long id, User requester) {
+        // Un lecteur (viewer) n'a pas accès à l'historique des versions
+        if (isViewer(requester)) {
+            throw ApiException.forbidden("Un lecteur n'a pas accès aux versions");
+        }
+        Document document = findAccessible(id, requester);
+        List<DocumentVersion> stored = versionRepository.findByDocumentOrderByVersionNumberDesc(document);
+
+        List<VersionDto> result = new ArrayList<>();
+        int currentNumber = (stored.isEmpty() ? 0 : stored.get(0).getVersionNumber()) + 1;
+        result.add(VersionDto.currentFrom(document, currentNumber));
+        stored.forEach(v -> result.add(VersionDto.from(v)));
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Document addVersion(Long id, MultipartFile file, String comment, User requester) {
+        Document document = requireOwnerOrAdmin(id, requester, "modifier");
+        if (document.getStatus() != DocumentStatus.ACTIVE) {
+            throw ApiException.badRequest("Seul un document actif peut recevoir une nouvelle version");
+        }
+
+        FileStorageService.StoredFile stored = storage.store(file);
+
+        // L'état précédent (fichier + infos) est figé avant d'appliquer le nouveau fichier
+        int previous = snapshot(document, requester,
+                "Remplacé par « " + stored.originalName() + " »"
+                        + (comment != null && !comment.isBlank() ? " — " + comment.trim() : ""));
+
+        applyFileTo(document, stored.originalName(), stored.storedName(), stored.path(),
+                stored.extension(), file.getContentType(), file.getSize());
+        document = documentRepository.save(document);
+
+        record(document, requester, ActionType.NEW_VERSION, "Nouvelle version v" + (previous + 1)
+                + (comment != null && !comment.isBlank() ? " — " + comment.trim() : ""));
+        return document;
+    }
+
+    @Override
+    public DocumentVersion findVersion(Long id, Long versionId, User requester) {
+        Document document = findAccessible(id, requester);
+        return versionRepository.findByIdAndDocument(versionId, document)
+                .orElseThrow(() -> ApiException.notFound("Version introuvable"));
+    }
+
+    @Override
+    @Transactional
+    public Resource downloadVersion(Long id, Long versionId, User requester) {
+        // Seul l'admin peut télécharger une version PRÉCÉDENTE.
+        // L'utilisateur simple ne télécharge que l'état actuel (endpoint /download).
+        if (!isAdmin(requester)) {
+            throw ApiException.forbidden("Seul un administrateur peut télécharger une version précédente");
+        }
+        Document document = findAccessible(id, requester);
+        DocumentVersion version = versionRepository.findByIdAndDocument(versionId, document)
+                .orElseThrow(() -> ApiException.notFound("Version introuvable"));
+        Resource resource = storage.load(version.getStoredFileName());
+        record(document, requester, ActionType.DOWNLOAD, "Téléchargement de la version v" + version.getVersionNumber());
+        return resource;
+    }
+
+    @Override
+    @Transactional
+    public Document restoreVersion(Long id, Long versionId, User requester) {
+        // La restauration d'une ancienne version est réservée à l'administrateur
+        if (!isAdmin(requester)) {
+            throw ApiException.forbidden("Seul un administrateur peut restaurer une version");
+        }
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Document introuvable"));
+        if (document.getStatus() == DocumentStatus.DELETED) {
+            throw ApiException.notFound("Document introuvable");
+        }
+        if (document.getStatus() != DocumentStatus.ACTIVE) {
+            throw ApiException.badRequest("Seul un document actif peut être restauré vers une ancienne version");
+        }
+        DocumentVersion version = versionRepository.findByIdAndDocument(versionId, document)
+                .orElseThrow(() -> ApiException.notFound("Version introuvable"));
+
+        // L'état actuel est figé avant de revenir à l'ancienne version
+        snapshot(document, requester, "Avant restauration de la v" + version.getVersionNumber());
+
+        applyFileTo(document, version.getOriginalFileName(), version.getStoredFileName(), version.getFilePath(),
+                version.getExtension(), version.getMimeType(), version.getSize());
+        if (version.getTitle() != null) {
+            document.setTitle(version.getTitle());
+        }
+        document.setDescription(version.getDescription());
+        document.setTags(version.getTags());
+        if (version.getVisibility() != null) {
+            document.setVisibility(parseVisibility(version.getVisibility()));
+        }
+        if (version.getCategoryName() != null) {
+            categoryRepository.findByName(version.getCategoryName()).ifPresent(document::setCategory);
+        }
+        document = documentRepository.save(document);
+
+        record(document, requester, ActionType.NEW_VERSION,
+                "Restauration de la v" + version.getVersionNumber());
+        return document;
+    }
+
+    /** Fige l'état complet actuel du document (fichier + métadonnées) comme nouvelle version. */
+    private int snapshot(Document document, User by, String comment) {
+        int number = versionRepository.maxVersionNumber(document) + 1;
+        versionRepository.save(DocumentVersion.builder()
+                .document(document)
+                .versionNumber(number)
+                .originalFileName(document.getOriginalFileName())
+                .storedFileName(document.getStoredFileName())
+                .filePath(document.getFilePath())
+                .extension(document.getExtension())
+                .mimeType(document.getMimeType())
+                .size(document.getSize())
+                .title(document.getTitle())
+                .description(document.getDescription())
+                .tags(document.getTags())
+                .visibility(document.getVisibility() != null ? document.getVisibility().name() : null)
+                .categoryName(document.getCategory() != null ? document.getCategory().getName() : null)
+                .comment(comment)
+                .uploadedBy(by)
+                .build());
+        return number;
+    }
+
+    private void applyFileTo(Document document, String originalName, String storedName, String path,
+                             String extension, String mimeType, Long size) {
+        document.setOriginalFileName(originalName);
+        document.setStoredFileName(storedName);
+        document.setFilePath(path);
+        document.setExtension(extension);
+        document.setMimeType(mimeType);
+        document.setSize(size);
     }
 
     private Specification<Document> visibleSpec(User requester) {

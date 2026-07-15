@@ -63,6 +63,23 @@ export interface OwnerDto {
   name: string;
 }
 
+export interface VersionDto {
+  id: number | null;
+  versionNumber: number;
+  originalFileName: string;
+  extension: string;
+  size: number;
+  title: string | null;
+  description: string | null;
+  tags: string | null;
+  visibility: string | null;
+  categoryName: string | null;
+  comment: string | null;
+  uploadedBy: string | null;
+  createdAt: string;
+  current: boolean;
+}
+
 export interface DocumentFilters {
   q?: string;
   categoryId?: number | null;
@@ -156,6 +173,28 @@ export class DocumentService {
 
   owners(): Observable<OwnerDto[]> {
     return this.http.get<OwnerDto[]>(`${API_URL}/documents/owners`);
+  }
+
+  versions(docId: number): Observable<VersionDto[]> {
+    return this.http.get<VersionDto[]>(`${API_URL}/documents/${docId}/versions`);
+  }
+
+  addVersion(docId: number, file: File, comment: string): Observable<HttpEvent<DocumentDto>> {
+    const form = new FormData();
+    form.append('file', file);
+    if (comment) form.append('comment', comment);
+    return this.http.post<DocumentDto>(`${API_URL}/documents/${docId}/versions`, form, {
+      reportProgress: true,
+      observe: 'events'
+    });
+  }
+
+  downloadVersion(docId: number, versionId: number): Observable<Blob> {
+    return this.http.get(`${API_URL}/documents/${docId}/versions/${versionId}/download`, { responseType: 'blob' });
+  }
+
+  restoreVersion(docId: number, versionId: number): Observable<DocumentDto> {
+    return this.http.put<DocumentDto>(`${API_URL}/documents/${docId}/versions/${versionId}/restore`, {});
   }
 
   createCategory(category: { name: string; description?: string }): Observable<CategoryDto> {
