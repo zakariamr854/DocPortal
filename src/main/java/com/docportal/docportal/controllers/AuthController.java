@@ -62,7 +62,7 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        // Auth stateless par JWT : le client supprime son token, rien à invalider côté serveur.
+
         return ResponseEntity.ok(Map.of("message", "Déconnecté"));
     }
 }

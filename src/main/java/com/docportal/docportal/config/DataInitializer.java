@@ -24,11 +24,11 @@ public class DataInitializer {
     @Bean
     public CommandLineRunner seedUsers() {
         return args -> {
-            // Migration : la visibilité "restreint" a été retirée -> tout document existant devient privé
+
             jdbcTemplate.update("UPDATE document SET visibility = 'PRIVATE' WHERE visibility = 'RESTRICTED'");
 
-            // Migration : contrainte CHECK figée par Hibernate à la création de la table ;
-            // elle ne connaît pas NEW_VERSION, on la supprime (les valeurs restent contrôlées par l'enum Java)
+
+
             jdbcTemplate.execute("ALTER TABLE document_history DROP CONSTRAINT IF EXISTS document_history_action_check");
 
             createIfMissing("admin", "admin123", "Administrateur DocPortal", "admin@docportal.com", Role.ADMIN);

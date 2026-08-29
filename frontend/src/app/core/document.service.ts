@@ -175,6 +175,20 @@ export class DocumentService {
     return this.http.get<OwnerDto[]>(`${API_URL}/documents/owners`);
   }
 
+
+
+  trash(): Observable<DocumentDto[]> {
+    return this.http.get<DocumentDto[]>(`${API_URL}/documents/trash`);
+  }
+
+  untrash(id: number): Observable<DocumentDto> {
+    return this.http.put<DocumentDto>(`${API_URL}/documents/${id}/untrash`, {});
+  }
+
+  purge(id: number): Observable<unknown> {
+    return this.http.delete(`${API_URL}/documents/${id}/purge`);
+  }
+
   versions(docId: number): Observable<VersionDto[]> {
     return this.http.get<VersionDto[]>(`${API_URL}/documents/${docId}/versions`);
   }

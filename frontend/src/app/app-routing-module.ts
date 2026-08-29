@@ -6,6 +6,7 @@ import { ShellComponent } from './pages/shell/shell';
 import { DashboardComponent } from './pages/dashboard/dashboard';
 import { DocumentsComponent } from './pages/documents/documents';
 import { CategoriesComponent } from './pages/categories/categories';
+import { TrashComponent } from './pages/trash/trash';
 
 const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -17,7 +18,8 @@ const routes: Routes = [
     children: [
       { path: 'dashboard', component: DashboardComponent },
       { path: 'documents', component: DocumentsComponent },
-      { path: 'categories', component: CategoriesComponent, canActivate: [adminGuard] }
+      { path: 'categories', component: CategoriesComponent, canActivate: [adminGuard] },
+      { path: 'trash', component: TrashComponent, canActivate: [adminGuard] }
     ]
   },
   { path: '**', redirectTo: 'login' }

@@ -33,10 +33,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -93,7 +96,7 @@ public class DocumentServiceImpl implements DocumentService {
         try {
             document = documentRepository.save(document);
         } catch (RuntimeException e) {
-            // aucune donnée incohérente ne doit rester : on retire le fichier physique si la base a refusé
+
             storage.deleteQuietly(stored.storedName());
             throw e;
         }
@@ -111,11 +114,11 @@ public class DocumentServiceImpl implements DocumentService {
         Specification<Document> spec = (root, cq, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // Les documents supprimés n'apparaissent jamais dans la liste
+
             predicates.add(cb.notEqual(root.get("status"), DocumentStatus.DELETED));
             predicates.add(cb.equal(root.get("status"), wanted));
 
-            // Droits : un utilisateur simple ne voit que les documents publics ou les siens
+
             if (!isAdmin(requester)) {
                 predicates.add(cb.or(
                         cb.equal(root.get("visibility"), Visibility.PUBLIC),
@@ -153,7 +156,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public List<User> visibleOwners(User requester) {
-        // Propriétaires distincts des documents que le demandeur a le droit de voir
+
         return isAdmin(requester)
                 ? documentRepository.findDistinctOwners()
                 : documentRepository.findDistinctVisibleOwners(requester.getId());
@@ -181,7 +184,7 @@ public class DocumentServiceImpl implements DocumentService {
             throw ApiException.badRequest("Un document archivé n'est plus modifiable");
         }
 
-        // Versioning automatique : l'état précédent est figé avant d'appliquer la modification
+
         snapshot(document, requester, "Avant modification des informations");
 
         if (request.title() != null && !request.title().isBlank()) {
@@ -275,7 +278,7 @@ public class DocumentServiceImpl implements DocumentService {
             if (Boolean.TRUE.equals(category.getActive())) {
                 activeCategories++;
             }
-            // Admin : tous les documents de la catégorie. Utilisateur : seulement ceux qu'il peut voir.
+
             long count = admin
                     ? documentRepository.countByCategoryAndStatusNot(category, DocumentStatus.DELETED)
                     : documentRepository.count(visibleInCategorySpec(requester, category));
@@ -291,7 +294,7 @@ public class DocumentServiceImpl implements DocumentService {
                 : documentRepository.findAll(visibleSpec(requester),
                         PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent();
 
-        // Admin : toutes les dernières actions. Utilisateur : uniquement les siennes.
+
         List<HistoryDto> recentActions = (admin
                 ? historyRepository.findAll(PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "actionDate"))).getContent()
                 : historyRepository.findTop5ByUserOrderByActionDateDesc(requester))
@@ -310,14 +313,14 @@ public class DocumentServiceImpl implements DocumentService {
         );
     }
 
-    // ===================== Versioning =====================
-    // Principe : chaque MODIFICATION d'un document (métadonnées, remplacement de
-    // fichier, restauration) fige d'abord l'état PRÉCÉDENT complet comme version.
-    // L'état actuel vit dans le document lui-même et s'affiche en tête de liste.
+
+
+
+
 
     @Override
     public List<VersionDto> versions(Long id, User requester) {
-        // Un lecteur (viewer) n'a pas accès à l'historique des versions
+
         if (isViewer(requester)) {
             throw ApiException.forbidden("Un lecteur n'a pas accès aux versions");
         }
@@ -341,7 +344,7 @@ public class DocumentServiceImpl implements DocumentService {
 
         FileStorageService.StoredFile stored = storage.store(file);
 
-        // L'état précédent (fichier + infos) est figé avant d'appliquer le nouveau fichier
+
         int previous = snapshot(document, requester,
                 "Remplacé par « " + stored.originalName() + " »"
                         + (comment != null && !comment.isBlank() ? " — " + comment.trim() : ""));
@@ -365,8 +368,8 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Resource downloadVersion(Long id, Long versionId, User requester) {
-        // Seul l'admin peut télécharger une version PRÉCÉDENTE.
-        // L'utilisateur simple ne télécharge que l'état actuel (endpoint /download).
+
+
         if (!isAdmin(requester)) {
             throw ApiException.forbidden("Seul un administrateur peut télécharger une version précédente");
         }
@@ -381,7 +384,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Document restoreVersion(Long id, Long versionId, User requester) {
-        // La restauration d'une ancienne version est réservée à l'administrateur
+
         if (!isAdmin(requester)) {
             throw ApiException.forbidden("Seul un administrateur peut restaurer une version");
         }
@@ -396,7 +399,7 @@ public class DocumentServiceImpl implements DocumentService {
         DocumentVersion version = versionRepository.findByIdAndDocument(versionId, document)
                 .orElseThrow(() -> ApiException.notFound("Version introuvable"));
 
-        // L'état actuel est figé avant de revenir à l'ancienne version
+
         snapshot(document, requester, "Avant restauration de la v" + version.getVersionNumber());
 
         applyFileTo(document, version.getOriginalFileName(), version.getStoredFileName(), version.getFilePath(),
@@ -419,7 +422,68 @@ public class DocumentServiceImpl implements DocumentService {
         return document;
     }
 
-    /** Fige l'état complet actuel du document (fichier + métadonnées) comme nouvelle version. */
+
+
+    @Override
+    public List<Document> trash(User requester) {
+        requireAdmin(requester, "consulter la corbeille");
+        return documentRepository.findByStatusOrderByDeletedAtDesc(DocumentStatus.DELETED);
+    }
+
+    @Override
+    @Transactional
+    public Document untrash(Long id, User requester) {
+        requireAdmin(requester, "restaurer un document supprimé");
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Document introuvable"));
+        if (document.getStatus() != DocumentStatus.DELETED) {
+            throw ApiException.badRequest("Ce document n'est pas dans la corbeille");
+        }
+        document.setStatus(DocumentStatus.ACTIVE);
+        document.setDeletedAt(null);
+        document = documentRepository.save(document);
+        record(document, requester, ActionType.RESTORE, "Restauration depuis la corbeille");
+        return document;
+    }
+
+
+    @Override
+    @Transactional
+    public void purge(Long id, User requester) {
+        requireAdmin(requester, "supprimer définitivement un document");
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Document introuvable"));
+        if (document.getStatus() != DocumentStatus.DELETED) {
+            throw ApiException.badRequest("Seul un document de la corbeille peut être supprimé définitivement");
+        }
+
+        List<DocumentVersion> versions = versionRepository.findByDocumentOrderByVersionNumberDesc(document);
+
+
+        Set<String> physicalFiles = new HashSet<>();
+        if (document.getStoredFileName() != null) {
+            physicalFiles.add(document.getStoredFileName());
+        }
+        versions.stream()
+                .map(DocumentVersion::getStoredFileName)
+                .filter(Objects::nonNull)
+                .forEach(physicalFiles::add);
+
+
+        versionRepository.deleteAll(versions);
+        historyRepository.deleteAll(historyRepository.findByDocument(document));
+        documentRepository.delete(document);
+
+        physicalFiles.forEach(storage::deleteQuietly);
+    }
+
+    private void requireAdmin(User requester, String action) {
+        if (!isAdmin(requester)) {
+            throw ApiException.forbidden("Seul un administrateur peut " + action);
+        }
+    }
+
+
     private int snapshot(Document document, User by, String comment) {
         int number = versionRepository.maxVersionNumber(document) + 1;
         versionRepository.save(DocumentVersion.builder()

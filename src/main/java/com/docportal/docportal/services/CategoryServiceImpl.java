@@ -52,7 +52,7 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.save(existing);
     }
 
-    /** Suppression logique : une catégorie utilisée par des documents est désactivée, jamais supprimée. */
+
     @Override
     @Transactional
     public void delete(Long id) {

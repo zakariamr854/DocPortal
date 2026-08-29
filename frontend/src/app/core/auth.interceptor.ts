@@ -15,7 +15,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
-      // Token expiré ou invalide : retour à la page de connexion (hors appel de login lui-même)
+
       if (err.status === 401 && !req.url.includes('/auth/login')) {
         auth.logout();
         router.navigate(['/login']);

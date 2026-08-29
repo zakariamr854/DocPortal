@@ -43,7 +43,7 @@ public record VersionDto(
         );
     }
 
-    /** L'état actuel du document, présenté comme dernière version de la liste. */
+
     public static VersionDto currentFrom(Document d, int versionNumber) {
         return new VersionDto(
                 null,

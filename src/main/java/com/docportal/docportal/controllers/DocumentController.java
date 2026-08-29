@@ -129,7 +129,7 @@ public class DocumentController {
 
     @GetMapping("/{id}/history")
     public ResponseEntity<List<HistoryDto>> history(@PathVariable Long id, Authentication authentication) {
-        // vérifie l'accès avant d'exposer l'historique
+
         documentService.findAccessible(id, currentUser(authentication));
         return ResponseEntity.ok(historyService.findByDocument(id).stream()
                 .map(HistoryDto::from)
@@ -151,7 +151,27 @@ public class DocumentController {
         return ResponseEntity.ok(Map.of("message", "Document supprimé"));
     }
 
-    // ===================== Versioning =====================
+
+
+    @GetMapping("/trash")
+    public ResponseEntity<List<DocumentDto>> trash(Authentication authentication) {
+        return ResponseEntity.ok(documentService.trash(currentUser(authentication)).stream()
+                .map(DocumentDto::from)
+                .toList());
+    }
+
+    @PutMapping("/{id}/untrash")
+    public ResponseEntity<DocumentDto> untrash(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(DocumentDto.from(documentService.untrash(id, currentUser(authentication))));
+    }
+
+    @DeleteMapping("/{id}/purge")
+    public ResponseEntity<Map<String, String>> purge(@PathVariable Long id, Authentication authentication) {
+        documentService.purge(id, currentUser(authentication));
+        return ResponseEntity.ok(Map.of("message", "Document supprimé définitivement"));
+    }
+
+
 
     @GetMapping("/{id}/versions")
     public ResponseEntity<List<VersionDto>> versions(@PathVariable Long id, Authentication authentication) {

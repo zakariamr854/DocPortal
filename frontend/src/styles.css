@@ -1,4 +1,4 @@
-@import "tailwindcss";/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", "Roboto", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;

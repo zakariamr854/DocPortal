@@ -16,7 +16,7 @@ import {
 })
 export class DocumentsComponent {
 
-  // Filtres
+
   q = '';
   categoryId: number | null = null;
   extension = '';
@@ -35,7 +35,7 @@ export class DocumentsComponent {
   readonly error = signal('');
   readonly notice = signal('');
 
-  // Modal upload
+
   readonly showUpload = signal(false);
   readonly dragOver = signal(false);
   uploadFile: File | null = null;
@@ -47,7 +47,7 @@ export class DocumentsComponent {
   readonly uploadProgress = signal<number | null>(null);
   readonly uploadError = signal('');
 
-  // Modal édition
+
   readonly editDoc = signal<DocumentDto | null>(null);
   editTitle = '';
   editDescription = '';
@@ -55,14 +55,14 @@ export class DocumentsComponent {
   editCategoryId: number | null = null;
   editVisibility = 'PRIVATE';
 
-  // Modal détails
+
   readonly detailDoc = signal<DocumentDto | null>(null);
   readonly detailHistory = signal<HistoryDto[]>([]);
 
-  // Confirmation de suppression
+
   readonly deleteTarget = signal<DocumentDto | null>(null);
 
-  // Modal versions
+
   readonly versionsDoc = signal<DocumentDto | null>(null);
   readonly versions = signal<VersionDto[]>([]);
   readonly versionsLoading = signal(false);
@@ -145,7 +145,7 @@ export class DocumentsComponent {
     this.load();
   }
 
-  // ===== Upload =====
+
 
   openUpload() {
     this.uploadFile = null;
@@ -226,7 +226,7 @@ export class DocumentsComponent {
     });
   }
 
-  // ===== Actions =====
+
 
   downloadDoc(doc: DocumentDto) {
     this.documents.download(doc.id).subscribe({
@@ -310,7 +310,7 @@ export class DocumentsComponent {
     });
   }
 
-  // ===== Versions =====
+
 
   openVersions(doc: DocumentDto) {
     this.versionsDoc.set(doc);
@@ -340,12 +340,12 @@ export class DocumentsComponent {
     return this.expandedVersions().includes(v.versionNumber);
   }
 
-  /** L'utilisateur simple ne télécharge que l'état actuel ; l'admin télécharge toute version. */
+
   canDownloadVersion(v: VersionDto): boolean {
     return this.isAdmin || v.current;
   }
 
-  /** La restauration d'une version précédente est réservée à l'administrateur. */
+
   canRestoreVersion(v: VersionDto): boolean {
     return this.isAdmin && !v.current && v.id !== null;
   }
@@ -353,7 +353,7 @@ export class DocumentsComponent {
   downloadVersion(v: VersionDto) {
     const doc = this.versionsDoc();
     if (!doc) return;
-    // Version actuelle = fichier courant du document ; version précédente = fichier archivé
+
     const req = v.id === null ? this.documents.download(doc.id) : this.documents.downloadVersion(doc.id, v.id);
     req.subscribe({
       next: blob => {
@@ -389,7 +389,7 @@ export class DocumentsComponent {
     } else if (sel.length < 2) {
       this.compareSel.set([...sel, v]);
     } else {
-      // Déjà 2 sélectionnées : on remplace la plus ancienne sélection
+
       this.compareSel.set([sel[1], v]);
     }
   }
@@ -405,7 +405,7 @@ export class DocumentsComponent {
     return [sorted[0], sorted[1]];
   }
 
-  /** Vrai si la valeur a changé entre deux versions (pour surligner la différence). */
+
   changed(a: string | number | null, b: string | number | null): boolean {
     return (a ?? '') !== (b ?? '');
   }
@@ -428,7 +428,7 @@ export class DocumentsComponent {
     return this.isAdmin || doc.ownerId === this.auth.currentUser()?.id;
   }
 
-  // ===== Affichage =====
+
 
   formatSize(bytes: number | null): string {
     if (bytes === null || bytes === undefined) return '—';

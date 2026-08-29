@@ -16,7 +16,7 @@ export class CategoriesComponent {
   readonly error = signal('');
   readonly notice = signal('');
 
-  // Modal ajout / édition
+
   readonly editing = signal<CategoryDto | null>(null);
   readonly showForm = signal(false);
   formName = '';

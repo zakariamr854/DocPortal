@@ -1,6 +1,6 @@
 <div class="fade-in">
 
-  <!-- En-tête -->
+
   <div class="flex items-center justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Documents</h1>
@@ -20,7 +20,7 @@
     }
   </div>
 
-  <!-- Messages -->
+
   @if (notice()) {
     <div class="mb-4 bg-green-50 border border-green-200 text-green-800 rounded-md px-4 py-3 text-sm fade-in">
       {{ notice() }}
@@ -33,10 +33,10 @@
     </div>
   }
 
-  <!-- Barre de recherche et filtres -->
+
   <div class="filter-bar mb-6">
 
-    <!-- Recherche -->
+
     <div class="search-wrap">
       <span class="search-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
@@ -51,7 +51,7 @@
 
     <span class="filter-sep" aria-hidden="true"></span>
 
-    <!-- Filtres -->
+
     <select [(ngModel)]="categoryId" (change)="applyFilters()"
             class="filter-select" [class.filter-on]="categoryId !== null">
       <option [ngValue]="null">Toutes les catégories</option>
@@ -72,7 +72,7 @@
     </select>
 
     @if (isViewer) {
-      <!-- Viewer : filtre par propriétaire (à la place de statut + Mes documents) -->
+
       <select [(ngModel)]="ownerId" (change)="applyFilters()"
               class="filter-select" [class.filter-on]="ownerId !== null">
         <option [ngValue]="null">Tous les propriétaires</option>
@@ -87,7 +87,7 @@
         <option value="ARCHIVED">Archivés</option>
       </select>
 
-      <!-- Interrupteur Mes documents -->
+
       <label class="mine-toggle" [class.mine-on]="mine">
         <input type="checkbox" [(ngModel)]="mine" (change)="applyFilters()" class="sr-only">
         <span class="toggle-track"><span class="toggle-knob"></span></span>
@@ -95,14 +95,14 @@
       </label>
     }
 
-    <!-- Réinitialiser -->
+
     <button (click)="resetFilters()" title="Réinitialiser les filtres" class="filter-reset">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4.5 h-4.5 w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
     </button>
 
   </div>
 
-  <!-- Tableau -->
+
   <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
 
     <table class="w-full text-sm">
@@ -210,7 +210,7 @@
       </tbody>
     </table>
 
-    <!-- Pagination -->
+
     @if (result(); as r) {
       @if (r.totalPages > 1 || r.totalElements > 0) {
         <div class="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50 text-sm text-slate-600">
@@ -227,12 +227,12 @@
 
 </div>
 
-<!-- ===== Modal Upload ===== -->
+
 @if (showUpload()) {
   <div class="modal-backdrop" (click)="showUpload.set(false)">
     <div class="modal-card modal-card-flush max-w-lg" (click)="$event.stopPropagation()">
 
-      <!-- En-tête -->
+
       <div class="upload-header">
         <div class="flex-1">
           <h2 class="text-lg font-bold text-slate-800 leading-tight">Ajouter un document</h2>
@@ -243,7 +243,7 @@
 
       <div class="px-7 py-6">
 
-        <!-- Zone de dépôt / fichier sélectionné -->
+
         @if (uploadFile; as f) {
           <div class="file-card">
             <span [class]="'ext-badge ' + extBadgeClass(fileExt(f.name))">
@@ -277,7 +277,7 @@
           </label>
         }
 
-        <!-- Métadonnées -->
+
         <p class="upload-section-title">Informations du document</p>
 
         <div class="space-y-4">
@@ -344,7 +344,7 @@
 
       </div>
 
-      <!-- Pied -->
+
       <div class="upload-footer">
         <button (click)="showUpload.set(false)" class="btn-secondary">Annuler</button>
         <button (click)="submitUpload()" [disabled]="uploadProgress() !== null" class="btn-primary">
@@ -357,12 +357,12 @@
   </div>
 }
 
-<!-- ===== Modal Édition ===== -->
+
 @if (editDoc(); as doc) {
   <div class="modal-backdrop" (click)="editDoc.set(null)">
     <div class="modal-card modal-card-flush max-w-lg" (click)="$event.stopPropagation()">
 
-      <!-- En-tête -->
+
       <div class="upload-header">
         <span [class]="'ext-badge ' + extBadgeClass(doc.extension)">{{ (doc.extension || '?').toUpperCase() }}</span>
         <div class="flex-1 min-w-0">
@@ -418,7 +418,7 @@
 
       </div>
 
-      <!-- Pied -->
+
       <div class="upload-footer">
         <button (click)="editDoc.set(null)" class="btn-secondary">Annuler</button>
         <button (click)="submitEdit()" class="btn-primary">
@@ -431,7 +431,7 @@
   </div>
 }
 
-<!-- ===== Modal Détails + Historique ===== -->
+
 @if (detailDoc(); as doc) {
   <div class="modal-backdrop" (click)="detailDoc.set(null)">
     <div class="modal-card max-w-2xl" (click)="$event.stopPropagation()">
@@ -473,7 +473,7 @@
         }
       </div>
 
-      <!-- Historique -->
+
       <h3 class="font-semibold text-slate-800 mt-6 mb-3 text-sm uppercase tracking-wide">Historique des actions</h3>
       <div class="max-h-48 overflow-y-auto border border-slate-100 rounded-md">
         @if (detailHistory().length === 0) {
@@ -502,12 +502,12 @@
   </div>
 }
 
-<!-- ===== Modal Versions ===== -->
+
 @if (versionsDoc(); as doc) {
   <div class="modal-backdrop" (click)="versionsDoc.set(null)">
     <div class="modal-card modal-card-flush max-w-2xl" (click)="$event.stopPropagation()">
 
-      <!-- En-tête -->
+
       <div class="upload-header">
         <span [class]="'ext-badge ' + extBadgeClass(doc.extension)">{{ (doc.extension || '?').toUpperCase() }}</span>
         <div class="flex-1 min-w-0">
@@ -525,7 +525,7 @@
           </div>
         }
 
-        <!-- Comparaison de deux versions -->
+
         @if (comparePair; as pair) {
           <div class="compare-panel">
             <p class="upload-section-title">Comparaison v{{ pair[0].versionNumber }} → v{{ pair[1].versionNumber }}</p>
@@ -609,7 +609,7 @@
           </p>
         }
 
-        <!-- Liste des versions -->
+
         @if (versionsLoading()) {
           <p class="text-center text-slate-400 py-8">
             <span class="spinner-dark inline-block align-middle mr-2"></span> Chargement…
@@ -619,7 +619,7 @@
             @for (v of versions(); track v.versionNumber) {
               <div class="version-card" [class.version-current]="v.current">
 
-                <!-- Ligne principale -->
+
                 <div class="version-head">
 
                   @if (versions().length > 1) {
@@ -660,7 +660,7 @@
 
                 </div>
 
-                <!-- Détails dépliés : toutes les infos de cette version -->
+
                 @if (isExpanded(v)) {
                   <div class="version-details">
                     <div><span class="detail-label">Titre</span><p>{{ v.title || '—' }}</p></div>
@@ -688,7 +688,7 @@
   </div>
 }
 
-<!-- ===== Confirmation suppression ===== -->
+
 @if (deleteTarget(); as doc) {
   <div class="modal-backdrop" (click)="deleteTarget.set(null)">
     <div class="modal-card max-w-sm" (click)="$event.stopPropagation()">

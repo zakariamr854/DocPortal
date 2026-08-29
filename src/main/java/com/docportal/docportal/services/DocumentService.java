@@ -46,4 +46,12 @@ public interface DocumentService {
     Resource downloadVersion(Long id, Long versionId, User requester);
 
     Document restoreVersion(Long id, Long versionId, User requester);
+
+
+
+    List<Document> trash(User requester);
+
+    Document untrash(Long id, User requester);
+
+    void purge(Long id, User requester);
 }

@@ -9,11 +9,11 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Photographie (snapshot) de l'état d'un document AVANT une modification :
- * chaque fois qu'un utilisateur modifie un document (métadonnées, fichier,
- * restauration), l'état précédent est figé ici — fichier ET informations.
- */
+
+
+
+
+
 @Entity
 @Table(name = "document_versions")
 @Data
@@ -47,7 +47,7 @@ public class DocumentVersion {
 
     private Long size;
 
-    // Métadonnées du document au moment du snapshot
+
     private String title;
 
     @Column(length = 2000)

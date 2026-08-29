@@ -25,8 +25,8 @@ public class JwtService {
     public String generateToken(User user) {
         Instant now = Instant.now();
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()  //Les claims sont les informations que l'on souhaite placer dans le JWT.
-                .issuer("docportal") // Le créateur
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer("docportal")
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(expirationSeconds))
                 .subject(user.getUsername())
@@ -35,7 +35,7 @@ public class JwtService {
                 .claim("roles", List.of(user.getRole().name()))
                 .build();
 
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();  //HS256 : Utiliser l'algorithme HMAC SHA-256 pour signer le JWT
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 

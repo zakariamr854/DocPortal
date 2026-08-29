@@ -21,6 +21,8 @@ public interface DocumentRepository extends JpaRepository<Document, Long>, JpaSp
 
     List<Document> findByStatus(DocumentStatus status);
 
+    List<Document> findByStatusOrderByDeletedAtDesc(DocumentStatus status);
+
     List<Document> findByVisibility(Visibility visibility);
 
     long countByStatusNot(DocumentStatus status);

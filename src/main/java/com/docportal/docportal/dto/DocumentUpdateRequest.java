@@ -6,5 +6,6 @@ public record DocumentUpdateRequest(
         String tags,
         Long categoryId,
         String visibility
+
 ) {
 }

@@ -37,7 +37,7 @@ public class FileStorageService {
         }
     }
 
-    /** Valide le fichier et le stocke sous un nom technique unique. Retourne le nom stocké. */
+
     public StoredFile store(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw ApiException.badRequest("Aucun fichier fourni");
@@ -88,7 +88,7 @@ public class FileStorageService {
         try {
             Files.deleteIfExists(root.resolve(storedFileName).normalize());
         } catch (IOException ignored) {
-            // suppression physique best-effort : la suppression logique en base fait foi
+
         }
     }
 

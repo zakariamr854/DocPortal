@@ -1,9 +1,9 @@
-/* ===== Fond clair épuré ===== */
+
 .login-bg {
   background: linear-gradient(160deg, #ffffff 0%, #f8fafc 55%, #eef4fb 100%);
 }
 
-/* ===== Formes flottantes (très douces sur fond blanc) ===== */
+
 .login-blob {
   position: absolute;
   border-radius: 9999px;
@@ -44,7 +44,7 @@
   66%      { transform: translate(-25px, 25px) scale(0.94); }
 }
 
-/* ===== Entrée de la carte ===== */
+
 .anim-card {
   animation: card-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   border: 1px solid #e2e8f0;
@@ -62,7 +62,7 @@
   }
 }
 
-/* ===== Entrée en cascade des éléments ===== */
+
 .anim-item {
   animation: item-in 0.6s ease both;
   animation-delay: var(--delay, 0s);
@@ -79,7 +79,7 @@
   }
 }
 
-/* ===== Secousse du message d'erreur ===== */
+
 .anim-shake {
   animation: shake 0.45s ease;
 }
@@ -92,7 +92,7 @@
   80%      { transform: translateX(5px); }
 }
 
-/* ===== Champs de saisie ===== */
+
 .input-field {
   width: 100%;
   border: 1px solid #cbd5e1;
@@ -117,7 +117,7 @@
   cursor: not-allowed;
 }
 
-/* ===== Bouton de connexion ===== */
+
 .btn-submit {
   width: 100%;
   display: flex;
@@ -149,7 +149,7 @@
   cursor: wait;
 }
 
-/* ===== Spinner de chargement ===== */
+
 .spinner {
   width: 1.15rem;
   height: 1.15rem;
@@ -163,7 +163,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* ===== Pastilles des fonctionnalités (panneau branding) ===== */
+
 .feature-dot {
   display: inline-flex;
   align-items: center;
@@ -176,7 +176,7 @@
   flex-shrink: 0;
 }
 
-/* ===== Accessibilité : réduire les animations si demandé ===== */
+
 @media (prefers-reduced-motion: reduce) {
   .login-blob,
   .anim-card,

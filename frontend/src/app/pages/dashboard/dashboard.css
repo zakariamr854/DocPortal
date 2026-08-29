@@ -7,7 +7,7 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Bouton principal (même style que la page Documents) */
+
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -24,7 +24,7 @@
 
 .btn-primary:hover { background: #1e40af; }
 
-/* Cartes statistiques */
+
 .stat-card {
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -70,7 +70,7 @@
   font-weight: 600;
 }
 
-/* Petite animation de salut sur l'image de bienvenue */
+
 .wave-img {
   transform-origin: 70% 70%;
   animation: wave 2.2s ease-in-out infinite;
